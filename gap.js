@@ -61,7 +61,7 @@ if (!/總計|地區/.test(k)) {
       return console.log('catch', it);
     }).then(function(table){
       return loadpx('12.px').then(function(moreData){
-        var moreF, more, e, counties, res$, k, countyFeatures, featureCounties, ordered, featuresCor, normalized, distance, maxDistance, rank, cDistance, cor, margin, width, height, x, ff, svg, n, orders, order, doRow, row, column, doRowF, rowF, columnF, doRowFf, rowFf, hcluster, cluster, traverse, timeout;
+        var moreF, more, e, counties, res$, k, countyFeatures, featureCounties, ordered, featuresCor, normalized, distance, maxDistance, rank, cDistance, cor, margin, width, height, x, ff, svg, n, orders, order, doRow, row, column, doRowF, rowF, columnF, doRowFf, rowFf, hcluster, cluster, traverse, tree, elbow, treesvg, nodes, link, node, timeout;
         try {
           moreF = [' 平均每人政府社會福利支出淨額', ' 社區發展媽媽教室班數'];
           console.log('foo');
@@ -208,6 +208,9 @@ if (!/總計|地區/.test(k)) {
           order = function(value){
             var t;
             x.domain(orders[value]);
+            if (value === 'cluster') {
+              $('g.tree').show();
+            }
             t = svg.transition().duration(2500);
             t.selectAll('.row').attr('transform', function(d, i){
               return "translate(0," + x(i) + ")";
@@ -273,7 +276,6 @@ if (!/總計|地區/.test(k)) {
               return cor(d);
             });
           };
-          console.log('ff', featuresCor);
           rowFf = svg.selectAll('.row-ff').data(featuresCor).enter().append('g').attr('class', 'row-ff').attr('transform', function(d, i){
             return "translate(-280," + (ff(i) - 200) + ")";
           }).each(doRowFf);
@@ -281,10 +283,11 @@ if (!/總計|地區/.test(k)) {
           console.log('clusterfck', hcluster);
           cluster = [];
           traverse = function(t){
-            var that;
-            console.log('t', t.size);
+            var which, that;
             if (t.value) {
-              cluster.push(distance.indexOf(t.value));
+              which = distance.indexOf(t.value);
+              cluster.push(which);
+              t.which = which;
             }
             if (that = t.left) {
               traverse(that);
@@ -295,6 +298,38 @@ if (!/總計|地區/.test(k)) {
           };
           traverse(hcluster);
           orders.cluster = cluster;
+          tree = d3.layout.tree().separation(function(a, b){
+            if (a.parent === b.parent) {
+              return 1;
+            } else {
+              return 0.5;
+            }
+          }).children(function(it){
+            var children, that;
+            children = [];
+            if (that = it.left) {
+              children.push(that);
+            }
+            if (that = it.right) {
+              children.push(that);
+            }
+            return children;
+          }).size([height, 300]).sort(function(a, b){
+            return a.which - b.which;
+          });
+          elbow = function(d, i){
+            console.log('elbow', d.target);
+            return "M" + (500 + 300 - d.source.y) + "," + d.source.x + "H" + (500 + 300 - (d.target.right || d.target.left ? d.target.y : 300)) + "V" + d.target.x;
+          };
+          treesvg = svg.append('g');
+          treesvg.attr('class', 'tree');
+          nodes = tree.nodes(hcluster);
+          console.log(nodes);
+          link = treesvg.selectAll(".link").data(tree.links(nodes)).enter().append("path").attr("class", "link").attr("d", elbow);
+          node = treesvg.selectAll(".node").data(nodes).enter().append("g").attr("class", "node").attr("transform", function(it){
+            return "translate(" + (500 + 300 - it.y) + "," + it.x + ")";
+          });
+          $('g.tree').hide();
           return d3.select('#order').on('change', function(){
             console.log('go', this.value);
             if (timeout) {

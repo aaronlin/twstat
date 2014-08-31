@@ -42,3 +42,9 @@ body {
   position: relative;
   width: 960px;
 }
+
+.link {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}

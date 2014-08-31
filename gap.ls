@@ -127,6 +127,8 @@ try
   */
   order = (value) ->
     x.domain orders[value]
+    if value is 'cluster'
+      $ 'g.tree' .show!
     t = svg.transition!.duration 2500
     t.selectAll '.row'
 #      .delay (d, i) -> (x i) * 4
@@ -193,7 +195,6 @@ try
 #    .style 'fill-opacity', (d) -> z d.z
     .style 'fill', (d) -> console.log \fill d, cor d; cor d
 #    .on 'mouseover' mouseover .on 'mouseout' mouseout
-  console.log \ff features-cor
   row-ff = svg.selectAll '.row-ff' .data features-cor
     .enter!append 'g' .attr 'class' 'row-ff'
     .attr 'transform' (d, i) -> "translate(-280,#{ff(i) - 200})"
@@ -202,19 +203,52 @@ try
   console.log \clusterfck  hcluster
   cluster = []
   traverse = (t) ->
-    console.log \t t.size
     if t.value
-      cluster.push distance.index-of t.value
+      which = distance.index-of t.value
+      cluster.push which
+      t.which = which
     if t.left => traverse that
     if t.right => traverse that
   traverse hcluster
   orders.cluster = cluster
 
+  tree = d3.layout.tree!
+    .separation (a, b) -> if a.parent is b.parent => 1 else 0.5
+    .children ->
+      children = []
+      if it.left => children.push that
+      if it.right => children.push that
+      children
+    .size [height, 300]
+    .sort (a, b) -> a.which - b.which
+
+  elbow = (d, i) ->
+    console.log \elbow d.target
+    "M" + (500 + 300 - d.source.y) + "," + d.source.x + "H" + (500 + 300 - if d.target.right || d.target.left => d.target.y else 300) + "V" + d.target.x
+
+  treesvg = svg.append 'g'
+  treesvg.attr 'class', 'tree'
+  nodes = tree.nodes hcluster
+  console.log nodes
+  link = treesvg.selectAll ".link"
+    .data tree.links nodes
+    .enter!append "path"
+    .attr "class" "link"
+    .attr "d", elbow
+
+  node = treesvg.selectAll ".node"
+    .data nodes
+    .enter!append "g"
+    .attr "class" "node"
+    .attr "transform", -> "translate(" + (500 + 300 - it.y) + "," + it.x + ")"
+
+  $ 'g.tree' .hide!
   var timeout
   d3.select '#order' .on 'change' ->
     console.log \go @value
     clearTimeout timeout if timeout
     order @value
+
 catch
   console.error e.stack
 
