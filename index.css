@@ -36,3 +36,9 @@
   -moz-box-pack: center;
   box-pack: center;
 }
+
+body {
+  margin: 1em auto 4em auto;
+  position: relative;
+  width: 960px;
+}
